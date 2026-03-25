@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -49,6 +50,16 @@ def init_db() -> None:
     )
     cur.execute(
         """
+        CREATE TABLE IF NOT EXISTS trackers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            device_id TEXT NOT NULL UNIQUE,
+            device_key TEXT NOT NULL,
+            created_utc TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+        """
+    )
+    cur.execute(
+        """
         CREATE INDEX IF NOT EXISTS idx_location_points_ts
         ON location_points (session_id, ts_utc)
         """
@@ -68,8 +79,93 @@ def init_db() -> None:
         ON location_points (session_id, device_id, ts_utc)
         """
     )
+
+    tracker_count = cur.execute("SELECT COUNT(*) FROM trackers").fetchone()[0]
+    if tracker_count == 0:
+        seeded = False
+        for device_id, device_key in settings.device_keys.items():
+            cur.execute(
+                "INSERT OR IGNORE INTO trackers (device_id, device_key) VALUES (?, ?)",
+                (device_id, device_key),
+            )
+            seeded = True
+        if not seeded and settings.device_key:
+            cur.execute(
+                "INSERT OR IGNORE INTO trackers (device_id, device_key) VALUES (?, ?)",
+                ("tracker-1", settings.device_key),
+            )
+
     conn.commit()
     conn.close()
+
+
+def list_trackers(include_keys: bool = False) -> list[dict[str, Any]]:
+    conn = get_connection()
+    if include_keys:
+        rows = conn.execute(
+            """
+            SELECT device_id, device_key, created_utc
+            FROM trackers
+            ORDER BY device_id ASC
+            """
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            """
+            SELECT device_id, created_utc
+            FROM trackers
+            ORDER BY device_id ASC
+            """
+        ).fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
+def get_device_key(device_id: str) -> str | None:
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT device_key FROM trackers WHERE device_id = ? LIMIT 1",
+        (device_id,),
+    ).fetchone()
+    conn.close()
+    if row:
+        return str(row["device_key"])
+    return settings.key_for_device(device_id)
+
+
+def upsert_tracker(device_id: str, device_key: str) -> None:
+    conn = get_connection()
+    conn.execute(
+        """
+        INSERT INTO trackers (device_id, device_key)
+        VALUES (?, ?)
+        ON CONFLICT(device_id) DO UPDATE SET device_key = excluded.device_key
+        """,
+        (device_id, device_key),
+    )
+    conn.commit()
+    conn.close()
+
+
+def delete_tracker(device_id: str) -> bool:
+    conn = get_connection()
+    cur = conn.execute("DELETE FROM trackers WHERE device_id = ?", (device_id,))
+    conn.commit()
+    conn.close()
+    return cur.rowcount > 0
+
+
+def write_route_geojson(route_geojson: dict[str, Any]) -> None:
+    settings.route_path.parent.mkdir(parents=True, exist_ok=True)
+    settings.route_path.write_text(json.dumps(route_geojson), encoding="utf-8")
+
+
+def clear_location_points() -> int:
+    conn = get_connection()
+    cur = conn.execute("DELETE FROM location_points")
+    conn.commit()
+    conn.close()
+    return cur.rowcount
 
 
 def insert_points(session_id: str, device_id: str, batch_id: str | None, rows: list[dict[str, Any]]) -> int:

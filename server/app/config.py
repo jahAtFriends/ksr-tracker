@@ -24,6 +24,8 @@ class Settings:
     allowed_origin: str
     viewer_username: str
     viewer_password: str
+    admin_username: str
+    admin_password: str
 
     def key_for_device(self, device_id: str) -> str | None:
         if self.device_keys:
@@ -41,6 +43,8 @@ class Settings:
             allowed_origin=os.getenv("ALLOWED_ORIGIN", "*"),
             viewer_username=os.getenv("VIEWER_USERNAME", "viewer"),
             viewer_password=os.getenv("VIEWER_PASSWORD", ""),
+            admin_username=os.getenv("ADMIN_USERNAME", "admin"),
+            admin_password=os.getenv("ADMIN_PASSWORD", "admin"),
         )
 
 

@@ -26,6 +26,7 @@ pip install -r server/requirements.txt
   - `DEVICE_KEYS` for per-device upload authentication (format: `tracker-1:key1,tracker-2:key2`)
   - Optional `DEVICE_KEY` fallback for single-device mode
   - Optional `VIEWER_USERNAME` and `VIEWER_PASSWORD` for web viewer gate
+  - Optional `ADMIN_USERNAME` and `ADMIN_PASSWORD` for admin panel (`/admin`)
 4. Run the API:
 
 ```bash
@@ -39,11 +40,21 @@ uvicorn server.app.main:app --reload --host 0.0.0.0 --port 8000
 ## Core API
 
 - `POST /api/ingest`
+- `GET /api/trackers`
 - `GET /api/state/latest`
 - `GET /api/route`
 - `GET /api/stream` (SSE)
 
+## Admin API
+
+- `GET /api/admin/trackers`
+- `POST /api/admin/trackers`
+- `DELETE /api/admin/trackers/{device_id}`
+- `POST /api/admin/trackers/generate-key`
+- `POST /api/admin/route`
+
 Viewer-facing endpoints (`/`, `/api/route`, `/api/state/latest`, `/api/stream`) are protected by HTTP Basic auth when `VIEWER_PASSWORD` is set.
+Admin-facing endpoint `/admin` and `/api/admin/*` use HTTP Basic auth with `ADMIN_USERNAME` and `ADMIN_PASSWORD`.
 
 ## Example Ingest Call
 
@@ -76,6 +87,7 @@ curl -X POST http://localhost:8000/api/ingest \
   - `TRACKER_SESSION_ID`
 3. Connect your Android phone and run the app.
 4. In the app, pick the tracker number before pressing Start Tracking.
+5. You can refresh tracker choices from the backend (`GET /api/trackers`) and enter or override the device key directly in the app.
 
 ## Route Import Utility
 

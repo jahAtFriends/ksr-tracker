@@ -9,12 +9,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from .auth import require_viewer_auth
+from .auth import require_admin_auth, require_viewer_auth
 from .config import settings
 from .db import init_db
+from .routes.admin import router as admin_router
 from .routes.ingest import router as ingest_router
 from .routes.state import router as state_router
 from .routes.stream import router as stream_router
+from .routes.trackers import router as trackers_router
 
 
 @asynccontextmanager
@@ -36,6 +38,8 @@ app.add_middleware(
 app.include_router(ingest_router)
 app.include_router(state_router)
 app.include_router(stream_router)
+app.include_router(trackers_router)
+app.include_router(admin_router)
 
 static_dir = Path(__file__).resolve().parents[1] / "static"
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
@@ -44,6 +48,11 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 @app.get("/")
 def index(_: Annotated[None, Depends(require_viewer_auth)]) -> FileResponse:
     return FileResponse(static_dir / "index.html")
+
+
+@app.get("/admin")
+def admin_index(_: Annotated[None, Depends(require_admin_auth)]) -> FileResponse:
+    return FileResponse(static_dir / "admin.html")
 
 
 @app.get("/health")

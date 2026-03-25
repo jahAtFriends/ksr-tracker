@@ -1,5 +1,6 @@
 package org.friends.ksrtracker
 
+import android.content.Context
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -9,7 +10,7 @@ import org.json.JSONObject
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
-class ApiClient {
+class ApiClient(private val context: Context) {
     private val client = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(15, TimeUnit.SECONDS)
@@ -20,7 +21,7 @@ class ApiClient {
             return true
         }
 
-        val deviceKey = DeviceConfig.deviceKeys()[deviceId] ?: return false
+        val deviceKey = DeviceConfig.deviceKey(context, deviceId) ?: return false
 
         val payload = JSONObject()
             .put("session_id", BuildConfig.TRACKER_SESSION_ID)
@@ -51,6 +52,34 @@ class ApiClient {
             }
         } catch (_: IOException) {
             false
+        }
+    }
+
+    fun fetchTrackers(): List<String>? {
+        val request = Request.Builder()
+            .url(BuildConfig.TRACKER_BASE_URL + "/api/trackers")
+            .get()
+            .build()
+
+        return try {
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    return null
+                }
+                val body = response.body?.string() ?: return null
+                val json = JSONObject(body)
+                val trackers = json.optJSONArray("trackers") ?: JSONArray()
+                buildList {
+                    for (i in 0 until trackers.length()) {
+                        val value = trackers.optString(i).trim()
+                        if (value.isNotEmpty()) {
+                            add(value)
+                        }
+                    }
+                }
+            }
+        } catch (_: IOException) {
+            null
         }
     }
 

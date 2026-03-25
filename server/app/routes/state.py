@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends
 
 from ..auth import require_viewer_auth
 from ..config import settings
-from ..db import get_latest_point, get_latest_points_by_device
+from ..db import get_latest_point, get_latest_points_by_device, get_recent_points
 
 
 router = APIRouter(prefix="/api", tags=["state"])
@@ -110,4 +110,18 @@ def get_latest_state(
             "progress_percent": overall_progress_percent,
             "by_device": device_stats,
         },
+    }
+
+
+@router.get("/state/recent")
+def get_recent_state(
+    _: Annotated[None, Depends(require_viewer_auth)],
+    session_id: str = "race-2026",
+    limit: int = 2000,
+) -> dict[str, Any]:
+    safe_limit = max(10, min(limit, 10000))
+    points = get_recent_points(session_id=session_id, limit=safe_limit)
+    return {
+        "session_id": session_id,
+        "points": points,
     }

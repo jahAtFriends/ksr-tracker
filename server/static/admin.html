@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KSR Tracker Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/styles.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <div>
+        <h1>KSR Tracker Admin</h1>
+        <p>Manage trackers, keys, and route file</p>
+      </div>
+      <a class="admin-link" href="/">Back to map</a>
+    </header>
+
+    <main class="admin-layout">
+      <section class="panel admin-panel">
+        <h2>Trackers</h2>
+        <form id="tracker-form" class="admin-form">
+          <label>
+            Device ID
+            <input id="device-id" type="text" placeholder="tracker-3" required />
+          </label>
+          <label>
+            Device key
+            <input id="device-key" type="text" placeholder="Leave empty to auto-generate" />
+          </label>
+          <div class="admin-actions">
+            <button type="button" id="generate-key">Generate Key</button>
+            <button type="submit">Save Tracker</button>
+          </div>
+        </form>
+
+        <div id="trackers" class="admin-list"></div>
+      </section>
+
+      <section class="panel admin-panel">
+        <h2>Route Upload</h2>
+        <form id="route-form" class="admin-form">
+          <label>
+            GeoJSON route file
+            <input id="route-file" type="file" accept=".geojson,.json,application/geo+json,application/json" required />
+          </label>
+          <button type="submit">Upload Route</button>
+        </form>
+        <p class="admin-hint">Expected format: GeoJSON FeatureCollection with a LineString feature.</p>
+
+        <h2>Data</h2>
+        <button id="clear-data" class="danger-btn" type="button">Clear Tracker GPS Data</button>
+        <p class="admin-hint">Deletes all tracker location points from the database.</p>
+      </section>
+    </main>
+
+    <p id="admin-message" class="admin-message"></p>
+  </div>
+
+  <script src="/static/js/admin.js"></script>
+</body>
+</html>

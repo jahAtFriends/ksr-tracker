@@ -46,7 +46,7 @@ class TrackingService : Service() {
         super.onCreate()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         activeDeviceId = DeviceConfig.selectedDeviceId(this)
-        repository = LocationRepository(ApiClient(), activeDeviceId)
+        repository = LocationRepository(ApiClient(this), activeDeviceId)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -55,7 +55,7 @@ class TrackingService : Service() {
                 val selected = intent.getStringExtra(EXTRA_DEVICE_ID)
                 if (!selected.isNullOrBlank() && selected != activeDeviceId) {
                     activeDeviceId = selected
-                    repository = LocationRepository(ApiClient(), activeDeviceId)
+                    repository = LocationRepository(ApiClient(this), activeDeviceId)
                 }
                 startTracking()
             }

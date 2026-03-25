@@ -14,9 +14,11 @@ const routeStyle = {
 let routeLayer = null;
 let reconnectTimer = null;
 const markersByDevice = new Map();
+const pathLayerByDevice = new Map();
+const pathPointsByDevice = new Map();
+const lastPointTsByDevice = new Map();
 const deviceColorById = new Map();
 const latestPointsByDevice = new Map();
-const deviceStatsById = new Map();
 
 const palette = [
   "#a8333f",
@@ -31,12 +33,6 @@ const palette = [
 
 const dom = {
   connection: document.getElementById("connection-pill"),
-  latestDevice: document.getElementById("latest-device"),
-  lastTs: document.getElementById("last-ts"),
-  lat: document.getElementById("lat"),
-  lng: document.getElementById("lng"),
-  speed: document.getElementById("speed"),
-  progress: document.getElementById("progress"),
   deviceList: document.getElementById("device-list"),
 };
 
@@ -44,14 +40,6 @@ function setConnectionState(isLive) {
   dom.connection.classList.toggle("live", isLive);
   dom.connection.classList.toggle("stale", !isLive);
   dom.connection.textContent = isLive ? "Live" : "Disconnected";
-}
-
-function updateStatus({ lat, lng, ts_utc, speed_kmh, progress_percent }) {
-  dom.lastTs.textContent = ts_utc || "-";
-  dom.lat.textContent = typeof lat === "number" ? lat.toFixed(6) : "-";
-  dom.lng.textContent = typeof lng === "number" ? lng.toFixed(6) : "-";
-  dom.speed.textContent = typeof speed_kmh === "number" ? speed_kmh.toFixed(2) : "-";
-  dom.progress.textContent = typeof progress_percent === "number" ? `${progress_percent.toFixed(2)}%` : "-";
 }
 
 function colorForDevice(deviceId) {
@@ -78,14 +66,64 @@ function moveMarker(deviceId, lat, lng) {
       weight: 2,
     }).addTo(map);
     markersByDevice.set(deviceId, marker);
-    map.setView([lat, lng], 14);
     return;
   }
 
   existing.setLatLng([lat, lng]);
 }
 
-function renderDeviceList(points, statsByDevice = {}) {
+function appendPathPoint(deviceId, lat, lng, tsUtc) {
+  if (typeof lat !== "number" || typeof lng !== "number") {
+    return;
+  }
+
+  const nextTs = tsUtc || "";
+  const lastTs = lastPointTsByDevice.get(deviceId) || "";
+  if (nextTs && lastTs && nextTs <= lastTs) {
+    return;
+  }
+
+  const points = pathPointsByDevice.get(deviceId) || [];
+  points.push([lat, lng]);
+  if (points.length > 5000) {
+    points.shift();
+  }
+  pathPointsByDevice.set(deviceId, points);
+
+  const color = colorForDevice(deviceId);
+  let layer = pathLayerByDevice.get(deviceId);
+  if (!layer) {
+    layer = L.polyline(points, {
+      color,
+      weight: 4,
+      opacity: 0.75,
+    }).addTo(map);
+    pathLayerByDevice.set(deviceId, layer);
+  } else {
+    layer.setLatLngs(points);
+  }
+
+  if (nextTs) {
+    lastPointTsByDevice.set(deviceId, nextTs);
+  }
+}
+
+function seedPathsFromHistory(points) {
+  const ordered = [...points].sort((a, b) => String(a.ts_utc || "").localeCompare(String(b.ts_utc || "")));
+  ordered.forEach((point) => {
+    const deviceId = String(point.device_id || "tracker-1");
+    appendPathPoint(deviceId, point.lat, point.lng, point.ts_utc);
+  });
+}
+
+function speedTextForPoint(point) {
+  if (!point || typeof point.speed !== "number") {
+    return "-";
+  }
+  return `${(point.speed * 3.6).toFixed(2)} km/h`;
+}
+
+function renderDeviceList(points) {
   if (!Array.isArray(points) || points.length === 0) {
     dom.deviceList.innerHTML = "<div class=\"device-values\">No tracker data yet.</div>";
     return;
@@ -96,17 +134,18 @@ function renderDeviceList(points, statsByDevice = {}) {
     .map((point) => {
       const deviceId = String(point.device_id || "tracker-1");
       const color = colorForDevice(deviceId);
-      const speed = statsByDevice[deviceId] ? statsByDevice[deviceId].speed_kmh : null;
-      const progress = statsByDevice[deviceId] ? statsByDevice[deviceId].progress_percent : null;
-      const speedText = typeof speed === "number" ? `${speed.toFixed(2)} km/h` : "-";
-      const progressText = typeof progress === "number" ? `${progress.toFixed(2)}%` : "-";
+      const lat = typeof point.lat === "number" ? point.lat.toFixed(5) : "-";
+      const lng = typeof point.lng === "number" ? point.lng.toFixed(5) : "-";
+      const speedText = speedTextForPoint(point);
+      const updatedText = point.ts_utc || "-";
       return `
         <div class="device-row">
           <div class="device-dot" style="background:${color}"></div>
           <div class="device-meta">
             <div class="device-name">${deviceId}</div>
-            <div class="device-values">${point.lat.toFixed(5)}, ${point.lng.toFixed(5)}</div>
-            <div class="device-values">${speedText} | ${progressText}</div>
+            <div class="device-values device-field"><span class="device-label">Location</span><span>${lat}, ${lng}</span></div>
+            <div class="device-values device-field"><span class="device-label">Speed</span><span>${speedText}</span></div>
+            <div class="device-values device-field"><span class="device-label">Updated</span><span>${updatedText}</span></div>
           </div>
         </div>
       `;
@@ -116,8 +155,7 @@ function renderDeviceList(points, statsByDevice = {}) {
 
 function refreshDeviceList() {
   const points = Array.from(latestPointsByDevice.values());
-  const stats = Object.fromEntries(deviceStatsById.entries());
-  renderDeviceList(points, stats);
+  renderDeviceList(points);
 }
 
 async function loadRoute() {
@@ -130,9 +168,20 @@ async function loadRoute() {
     map.removeLayer(routeLayer);
   }
   routeLayer = L.geoJSON(route, { style: routeStyle }).addTo(map);
+  // Keep viewport centered on the route geometry whenever route data is available.
   if (routeLayer.getBounds().isValid()) {
     map.fitBounds(routeLayer.getBounds(), { padding: [20, 20] });
   }
+}
+
+async function loadRecentHistory() {
+  const response = await fetch("/api/state/recent?limit=5000");
+  if (!response.ok) {
+    return;
+  }
+  const data = await response.json();
+  const points = Array.isArray(data.points) ? data.points : [];
+  seedPathsFromHistory(points);
 }
 
 async function loadInitialState() {
@@ -142,28 +191,15 @@ async function loadInitialState() {
   }
 
   const data = await response.json();
-  const latest = data.latest || {};
   const latestByDevice = Array.isArray(data.latest_by_device) ? data.latest_by_device : [];
-  const statsByDevice = data.stats && data.stats.by_device ? data.stats.by_device : {};
 
   latestByDevice.forEach((point) => {
     const deviceId = String(point.device_id || "tracker-1");
     moveMarker(deviceId, point.lat, point.lng);
+    appendPathPoint(deviceId, point.lat, point.lng, point.ts_utc);
     latestPointsByDevice.set(deviceId, point);
   });
 
-  Object.entries(statsByDevice).forEach(([deviceId, stat]) => {
-    deviceStatsById.set(deviceId, stat);
-  });
-
-  dom.latestDevice.textContent = latest.device_id || "-";
-  updateStatus({
-    lat: latest.lat,
-    lng: latest.lng,
-    ts_utc: latest.ts_utc,
-    speed_kmh: data.stats ? data.stats.speed_kmh : null,
-    progress_percent: data.stats ? data.stats.progress_percent : null,
-  });
   refreshDeviceList();
 }
 
@@ -182,19 +218,8 @@ function connectStream() {
     const payload = JSON.parse(event.data);
     const deviceId = String(payload.device_id || "tracker-1");
     moveMarker(deviceId, payload.lat, payload.lng);
+    appendPathPoint(deviceId, payload.lat, payload.lng, payload.ts_utc);
     latestPointsByDevice.set(deviceId, payload);
-    deviceStatsById.set(deviceId, {
-      speed_kmh: typeof payload.speed === "number" ? payload.speed * 3.6 : null,
-      progress_percent: null,
-    });
-    dom.latestDevice.textContent = deviceId;
-    updateStatus({
-      lat: payload.lat,
-      lng: payload.lng,
-      ts_utc: payload.ts_utc,
-      speed_kmh: typeof payload.speed === "number" ? payload.speed * 3.6 : null,
-      progress_percent: null,
-    });
     refreshDeviceList();
   });
 
@@ -218,6 +243,7 @@ window.addEventListener("resize", () => {
 (async function init() {
   setConnectionState(false);
   await loadRoute();
+  await loadRecentHistory();
   await loadInitialState();
   connectStream();
 })();

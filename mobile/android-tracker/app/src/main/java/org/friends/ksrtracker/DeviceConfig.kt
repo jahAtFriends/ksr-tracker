@@ -6,6 +6,7 @@ import org.json.JSONObject
 object DeviceConfig {
     private const val PREFS_NAME = "ksr_tracker_prefs"
     private const val PREF_DEVICE_ID = "selected_device_id"
+    private const val PREF_DEVICE_KEY_PREFIX = "device_key_"
 
     fun availableDeviceIds(): List<String> {
         return BuildConfig.TRACKER_DEVICE_IDS_CSV
@@ -46,5 +47,19 @@ object DeviceConfig {
     fun setSelectedDeviceId(context: Context, deviceId: String) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putString(PREF_DEVICE_ID, deviceId).apply()
+    }
+
+    fun deviceKey(context: Context, deviceId: String): String? {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val saved = prefs.getString(PREF_DEVICE_KEY_PREFIX + deviceId, null)?.trim()
+        if (!saved.isNullOrEmpty()) {
+            return saved
+        }
+        return deviceKeys()[deviceId]
+    }
+
+    fun setDeviceKey(context: Context, deviceId: String, key: String) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(PREF_DEVICE_KEY_PREFIX + deviceId, key.trim()).apply()
     }
 }

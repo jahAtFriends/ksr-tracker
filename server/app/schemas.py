@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional
 from pydantic import BaseModel, Field
 
 
@@ -15,3 +15,12 @@ class IngestRequest(BaseModel):
     device_id: str = Field(default="tracker-1", min_length=1, max_length=64)
     batch_id: Optional[str] = None
     points: list[LocationPointIn] = Field(min_length=1, max_length=200)
+
+
+class TrackerCreateRequest(BaseModel):
+    device_id: str = Field(min_length=1, max_length=64)
+    device_key: Optional[str] = Field(default=None, min_length=6, max_length=256)
+
+
+class RouteUploadRequest(BaseModel):
+    route_geojson: dict[str, Any]

@@ -22,7 +22,10 @@
         <h1>Friends School Kinetic Tracker</h1>
         <p>2026 Baltimore Kinetic Sculpture Race</p>
       </div>
-      <div id="connection-pill" class="pill stale">Disconnected</div>
+      <div>
+        <a class="admin-link" href="/admin">Admin</a>
+        <div id="connection-pill" class="pill stale">Disconnected</div>
+      </div>
     </header>
 
     <main class="layout">
@@ -30,35 +33,7 @@
         <div id="map"></div>
       </section>
       <aside class="panel">
-        <h2>Live Status</h2>
-        <dl>
-          <div>
-            <dt>Most Recent Device</dt>
-            <dd id="latest-device">-</dd>
-          </div>
-          <div>
-            <dt>Last Timestamp (UTC)</dt>
-            <dd id="last-ts">-</dd>
-          </div>
-          <div>
-            <dt>Latitude</dt>
-            <dd id="lat">-</dd>
-          </div>
-          <div>
-            <dt>Longitude</dt>
-            <dd id="lng">-</dd>
-          </div>
-          <div>
-            <dt>Speed (km/h)</dt>
-            <dd id="speed">-</dd>
-          </div>
-          <div>
-            <dt>Route Complete</dt>
-            <dd id="progress">-</dd>
-          </div>
-        </dl>
-
-        <h2>Trackers</h2>
+        <h2>Active Trackers</h2>
         <div id="device-list" class="device-list"></div>
       </aside>
     </main>

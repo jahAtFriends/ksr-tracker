@@ -5,8 +5,7 @@ from typing import Any
 
 from fastapi import APIRouter, Header, HTTPException
 
-from ..config import settings
-from ..db import get_latest_point, insert_points
+from ..db import get_device_key, get_latest_point, insert_points
 from ..schemas import IngestRequest
 from ..sse import broker
 
@@ -29,7 +28,7 @@ def _normalize_ts(value: str | None) -> str:
 
 @router.post("/ingest")
 async def ingest_location(payload: IngestRequest, x_device_key: str = Header(default="")) -> dict[str, Any]:
-    expected_key = settings.key_for_device(payload.device_id)
+    expected_key = get_device_key(payload.device_id)
     if not expected_key or x_device_key.strip() != expected_key:
         raise HTTPException(status_code=401, detail="Invalid device key")
 
