@@ -4,62 +4,91 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>KSR Tracker Admin</title>
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+    integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+    crossorigin="anonymous"
+  />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/static/css/styles.css" />
 </head>
 <body>
-  <div class="page">
-    <header class="header">
-      <div>
-        <h1>KSR Tracker Admin</h1>
-        <p>Manage trackers, keys, and route file</p>
+  <div class="page container py-3 py-lg-4">
+    <header class="app-header card shadow-sm border-0 mb-3">
+      <div class="card-body d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+        <div>
+          <h1 class="h3 mb-1 text-white">KSR Tracker Admin</h1>
+          <p class="mb-0 text-white-50">Manage trackers, keys, and route file</p>
+        </div>
+        <a class="btn btn-outline-light btn-sm" href="/">Back to map</a>
       </div>
-      <a class="admin-link" href="/">Back to map</a>
     </header>
 
-    <main class="admin-layout">
-      <section class="panel admin-panel">
-        <h2>Trackers</h2>
-        <form id="tracker-form" class="admin-form">
-          <label>
-            Device ID
-            <input id="device-id" type="text" placeholder="tracker-3" required />
-          </label>
-          <label>
-            Device key
-            <input id="device-key" type="text" placeholder="Leave empty to auto-generate" />
-          </label>
-          <div class="admin-actions">
-            <button type="button" id="generate-key">Generate Key</button>
-            <button type="submit">Save Tracker</button>
-          </div>
-        </form>
+    <main class="row g-3">
+      <section class="col-12 col-xl-7">
+        <div class="card shadow-sm border-0 h-100">
+          <div class="card-body">
+            <h2 class="h5 mb-3">Trackers</h2>
+            <form id="tracker-form" class="vstack gap-3">
+              <div>
+                <label class="form-label" for="device-id">Device ID</label>
+                <input id="device-id" class="form-control" type="text" placeholder="tracker-3" required />
+              </div>
+              <div>
+                <label class="form-label" for="device-key">Device Key</label>
+                <input id="device-key" class="form-control" type="text" placeholder="Leave empty to auto-generate" />
+              </div>
+              <div class="d-flex gap-2 flex-wrap">
+                <button type="button" id="generate-key" class="btn btn-outline-secondary">Generate Key</button>
+                <button type="submit" class="btn btn-primary">Save Tracker</button>
+              </div>
+            </form>
 
-        <div id="trackers" class="admin-list"></div>
+            <div id="trackers" class="admin-list mt-3"></div>
+          </div>
+        </div>
       </section>
 
-      <section class="panel admin-panel">
-        <h2>Route Upload</h2>
-        <form id="route-form" class="admin-form">
-          <label>
-            GeoJSON route file
-            <input id="route-file" type="file" accept=".geojson,.json,application/geo+json,application/json" required />
-          </label>
-          <button type="submit">Upload Route</button>
-        </form>
-        <p class="admin-hint">Expected format: GeoJSON FeatureCollection with a LineString feature.</p>
+      <section class="col-12 col-xl-5">
+        <div class="card shadow-sm border-0 h-100">
+          <div class="card-body d-flex flex-column gap-4">
+            <section>
+              <h2 class="h5 mb-3">Route Upload</h2>
+              <form id="route-form" class="vstack gap-3">
+                <div>
+                  <label class="form-label" for="route-file">GeoJSON route file</label>
+                  <input id="route-file" class="form-control" type="file" accept=".geojson,.json,application/geo+json,application/json" required />
+                </div>
+                <button type="submit" class="btn btn-primary">Upload Route</button>
+              </form>
+              <p class="admin-hint mt-2 mb-0">Expected format: GeoJSON FeatureCollection with a LineString feature.</p>
+            </section>
 
-        <h2>Data</h2>
-        <button id="clear-data" class="danger-btn" type="button">Clear Tracker GPS Data</button>
-        <p class="admin-hint">Deletes all tracker location points from the database.</p>
+            <section>
+              <h2 class="h5 mb-3">Data</h2>
+              <button id="clear-data" class="btn btn-danger" type="button">Clear Tracker GPS Data</button>
+              <p class="admin-hint mt-2 mb-0">Deletes all tracker location points from the database.</p>
+            </section>
+          </div>
+        </div>
       </section>
     </main>
 
-    <p id="admin-message" class="admin-message"></p>
+    <p id="admin-message" class="admin-message mt-3 mb-0"></p>
+
+    <footer class="site-footer mt-3 small">
+      <p class="mb-0">Copyright &copy; 2026 Friends School of Baltimore. Site created by the Friends School of Baltimore Department of Computer Science.</p>
+    </footer>
   </div>
 
+  <script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+    crossorigin="anonymous"
+  ></script>
   <script src="/static/js/admin.js"></script>
 </body>
 </html>

@@ -25,25 +25,25 @@ async function fetchTrackers() {
 
 function renderTrackers(rows) {
   if (!rows.length) {
-    dom.trackers.innerHTML = "<div class=\"device-values\">No trackers configured.</div>";
+    dom.trackers.innerHTML = "<div class=\"alert alert-light border mb-0\">No trackers configured.</div>";
     return;
   }
 
-  dom.trackers.innerHTML = rows
+  dom.trackers.innerHTML = `<div class="list-group shadow-sm">${rows
     .map((tracker) => {
       const id = String(tracker.device_id || "");
       const key = String(tracker.device_key || "");
       return `
-      <div class="tracker-row">
+      <div class="list-group-item d-flex justify-content-between align-items-start gap-2">
         <div>
-          <div class="device-name">${id}</div>
-          <div class="device-values">${key}</div>
+          <div class="fw-semibold text-dark">${id}</div>
+          <div class="small text-secondary">${key}</div>
         </div>
-        <button data-remove="${id}" class="danger-btn" type="button">Remove</button>
+        <button data-remove="${id}" class="btn btn-outline-danger btn-sm" type="button">Remove</button>
       </div>
     `;
     })
-    .join("");
+    .join("")}</div>`;
 }
 
 async function refreshTrackers() {

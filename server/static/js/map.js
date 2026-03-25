@@ -125,7 +125,7 @@ function speedTextForPoint(point) {
 
 function renderDeviceList(points) {
   if (!Array.isArray(points) || points.length === 0) {
-    dom.deviceList.innerHTML = "<div class=\"device-values\">No tracker data yet.</div>";
+    dom.deviceList.innerHTML = "<div class=\"alert alert-light border mb-0\">No tracker data yet.</div>";
     return;
   }
 
@@ -139,13 +139,17 @@ function renderDeviceList(points) {
       const speedText = speedTextForPoint(point);
       const updatedText = point.ts_utc || "-";
       return `
-        <div class="device-row">
-          <div class="device-dot" style="background:${color}"></div>
-          <div class="device-meta">
-            <div class="device-name">${deviceId}</div>
-            <div class="device-values device-field"><span class="device-label">Location</span><span>${lat}, ${lng}</span></div>
-            <div class="device-values device-field"><span class="device-label">Speed</span><span>${speedText}</span></div>
-            <div class="device-values device-field"><span class="device-label">Updated</span><span>${updatedText}</span></div>
+        <div class="card border-0 shadow-sm device-row">
+          <div class="card-body p-3">
+            <div class="d-flex align-items-start gap-2">
+              <div class="device-dot mt-1" style="background:${color}"></div>
+              <div class="device-meta flex-grow-1">
+                <div class="fw-semibold text-dark">${deviceId}</div>
+                <div class="small device-values device-field"><span class="device-label">Location</span><span>${lat}, ${lng}</span></div>
+                <div class="small device-values device-field"><span class="device-label">Speed</span><span>${speedText}</span></div>
+                <div class="small device-values device-field"><span class="device-label">Updated</span><span>${updatedText}</span></div>
+              </div>
+            </div>
           </div>
         </div>
       `;
