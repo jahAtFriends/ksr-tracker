@@ -31,10 +31,9 @@ async def stream_updates(
             while True:
                 try:
                     message = await asyncio.wait_for(queue.get(), timeout=15)
-                    payload = {
-                        **message.get("payload", {}),
-                        "session_id": session_id,
-                    }
+                    payload = message.get("payload", {})
+                    if payload.get("session_id") != session_id:
+                        continue
                     yield _format_sse(message.get("event", "message"), payload)
                 except asyncio.TimeoutError:
                     yield _format_sse(

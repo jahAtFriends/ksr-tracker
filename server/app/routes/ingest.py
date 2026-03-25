@@ -29,7 +29,8 @@ def _normalize_ts(value: str | None) -> str:
 
 @router.post("/ingest")
 async def ingest_location(payload: IngestRequest, x_device_key: str = Header(default="")) -> dict[str, Any]:
-    if x_device_key.strip() != settings.device_key:
+    expected_key = settings.key_for_device(payload.device_id)
+    if not expected_key or x_device_key.strip() != expected_key:
         raise HTTPException(status_code=401, detail="Invalid device key")
 
     received_utc = _utc_now_iso()
@@ -46,7 +47,7 @@ async def ingest_location(payload: IngestRequest, x_device_key: str = Header(def
             }
         )
 
-    inserted = insert_points(payload.session_id, payload.batch_id, rows)
+    inserted = insert_points(payload.session_id, payload.device_id, payload.batch_id, rows)
     latest = get_latest_point(payload.session_id)
     if latest:
         await broker.publish({"event": "location", "payload": latest})

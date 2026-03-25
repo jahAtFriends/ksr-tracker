@@ -4,6 +4,7 @@ import kotlinx.coroutines.delay
 
 class LocationRepository(
     private val apiClient: ApiClient,
+    private val deviceId: String,
 ) {
     private val queue = ArrayDeque<LocationSample>()
 
@@ -41,7 +42,7 @@ class LocationRepository(
             return true
         }
 
-        val ok = apiClient.postPoints(batch)
+        val ok = apiClient.postPoints(batch, deviceId)
         if (!ok) {
             // Put points back in front order when upload fails.
             batch.asReversed().forEach { queue.addFirst(it) }

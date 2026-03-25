@@ -11,17 +11,33 @@ const routeStyle = {
   opacity: 0.8,
 };
 
-let marker = null;
 let routeLayer = null;
 let reconnectTimer = null;
+const markersByDevice = new Map();
+const deviceColorById = new Map();
+const latestPointsByDevice = new Map();
+const deviceStatsById = new Map();
+
+const palette = [
+  "#a8333f",
+  "#1f7a8c",
+  "#2d6a4f",
+  "#bc6c25",
+  "#3d5a80",
+  "#8d5a97",
+  "#6c757d",
+  "#ef476f",
+];
 
 const dom = {
   connection: document.getElementById("connection-pill"),
+  latestDevice: document.getElementById("latest-device"),
   lastTs: document.getElementById("last-ts"),
   lat: document.getElementById("lat"),
   lng: document.getElementById("lng"),
   speed: document.getElementById("speed"),
   progress: document.getElementById("progress"),
+  deviceList: document.getElementById("device-list"),
 };
 
 function setConnectionState(isLive) {
@@ -38,24 +54,70 @@ function updateStatus({ lat, lng, ts_utc, speed_kmh, progress_percent }) {
   dom.progress.textContent = typeof progress_percent === "number" ? `${progress_percent.toFixed(2)}%` : "-";
 }
 
-function moveMarker(lat, lng) {
+function colorForDevice(deviceId) {
+  if (!deviceColorById.has(deviceId)) {
+    const nextColor = palette[deviceColorById.size % palette.length];
+    deviceColorById.set(deviceId, nextColor);
+  }
+  return deviceColorById.get(deviceId);
+}
+
+function moveMarker(deviceId, lat, lng) {
   if (typeof lat !== "number" || typeof lng !== "number") {
     return;
   }
 
-  if (!marker) {
-    marker = L.circleMarker([lat, lng], {
+  const color = colorForDevice(deviceId);
+  const existing = markersByDevice.get(deviceId);
+  if (!existing) {
+    const marker = L.circleMarker([lat, lng], {
       radius: 8,
-      color: "#a8333f",
-      fillColor: "#a8333f",
+      color,
+      fillColor: color,
       fillOpacity: 0.9,
       weight: 2,
     }).addTo(map);
+    markersByDevice.set(deviceId, marker);
     map.setView([lat, lng], 14);
     return;
   }
 
-  marker.setLatLng([lat, lng]);
+  existing.setLatLng([lat, lng]);
+}
+
+function renderDeviceList(points, statsByDevice = {}) {
+  if (!Array.isArray(points) || points.length === 0) {
+    dom.deviceList.innerHTML = "<div class=\"device-values\">No tracker data yet.</div>";
+    return;
+  }
+
+  const sorted = [...points].sort((a, b) => String(a.device_id).localeCompare(String(b.device_id)));
+  dom.deviceList.innerHTML = sorted
+    .map((point) => {
+      const deviceId = String(point.device_id || "tracker-1");
+      const color = colorForDevice(deviceId);
+      const speed = statsByDevice[deviceId] ? statsByDevice[deviceId].speed_kmh : null;
+      const progress = statsByDevice[deviceId] ? statsByDevice[deviceId].progress_percent : null;
+      const speedText = typeof speed === "number" ? `${speed.toFixed(2)} km/h` : "-";
+      const progressText = typeof progress === "number" ? `${progress.toFixed(2)}%` : "-";
+      return `
+        <div class="device-row">
+          <div class="device-dot" style="background:${color}"></div>
+          <div class="device-meta">
+            <div class="device-name">${deviceId}</div>
+            <div class="device-values">${point.lat.toFixed(5)}, ${point.lng.toFixed(5)}</div>
+            <div class="device-values">${speedText} | ${progressText}</div>
+          </div>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+function refreshDeviceList() {
+  const points = Array.from(latestPointsByDevice.values());
+  const stats = Object.fromEntries(deviceStatsById.entries());
+  renderDeviceList(points, stats);
 }
 
 async function loadRoute() {
@@ -81,7 +143,20 @@ async function loadInitialState() {
 
   const data = await response.json();
   const latest = data.latest || {};
-  moveMarker(latest.lat, latest.lng);
+  const latestByDevice = Array.isArray(data.latest_by_device) ? data.latest_by_device : [];
+  const statsByDevice = data.stats && data.stats.by_device ? data.stats.by_device : {};
+
+  latestByDevice.forEach((point) => {
+    const deviceId = String(point.device_id || "tracker-1");
+    moveMarker(deviceId, point.lat, point.lng);
+    latestPointsByDevice.set(deviceId, point);
+  });
+
+  Object.entries(statsByDevice).forEach(([deviceId, stat]) => {
+    deviceStatsById.set(deviceId, stat);
+  });
+
+  dom.latestDevice.textContent = latest.device_id || "-";
   updateStatus({
     lat: latest.lat,
     lng: latest.lng,
@@ -89,6 +164,7 @@ async function loadInitialState() {
     speed_kmh: data.stats ? data.stats.speed_kmh : null,
     progress_percent: data.stats ? data.stats.progress_percent : null,
   });
+  refreshDeviceList();
 }
 
 function connectStream() {
@@ -104,7 +180,14 @@ function connectStream() {
 
   source.addEventListener("location", (event) => {
     const payload = JSON.parse(event.data);
-    moveMarker(payload.lat, payload.lng);
+    const deviceId = String(payload.device_id || "tracker-1");
+    moveMarker(deviceId, payload.lat, payload.lng);
+    latestPointsByDevice.set(deviceId, payload);
+    deviceStatsById.set(deviceId, {
+      speed_kmh: typeof payload.speed === "number" ? payload.speed * 3.6 : null,
+      progress_percent: null,
+    });
+    dom.latestDevice.textContent = deviceId;
     updateStatus({
       lat: payload.lat,
       lng: payload.lng,
@@ -112,6 +195,7 @@ function connectStream() {
       speed_kmh: typeof payload.speed === "number" ? payload.speed * 3.6 : null,
       progress_percent: null,
     });
+    refreshDeviceList();
   });
 
   source.addEventListener("heartbeat", () => {

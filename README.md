@@ -23,7 +23,8 @@ pip install -r server/requirements.txt
 ```
 
 3. Copy `.env.example` to `.env` and set values:
-  - `DEVICE_KEY` for phone upload authentication
+  - `DEVICE_KEYS` for per-device upload authentication (format: `tracker-1:key1,tracker-2:key2`)
+  - Optional `DEVICE_KEY` fallback for single-device mode
   - Optional `VIEWER_USERNAME` and `VIEWER_PASSWORD` for web viewer gate
 4. Run the API:
 
@@ -52,6 +53,7 @@ curl -X POST http://localhost:8000/api/ingest \
   -H "X-Device-Key: replace-with-strong-random-token" \
   -d '{
     "session_id": "race-2026",
+    "device_id": "tracker-1",
     "batch_id": "test-batch-1",
     "points": [
       {"lat": 39.3314, "lng": -76.6199, "acc": 6.2, "speed": 1.2, "ts": "2026-03-12T12:00:00Z"}
@@ -69,9 +71,11 @@ curl -X POST http://localhost:8000/api/ingest \
 1. Open [mobile/android-tracker](mobile/android-tracker) in Android Studio.
 2. Edit [mobile/android-tracker/app/build.gradle.kts](mobile/android-tracker/app/build.gradle.kts) and set:
   - `TRACKER_BASE_URL`
-  - `TRACKER_DEVICE_KEY`
+  - `TRACKER_DEVICE_IDS_CSV`
+  - `TRACKER_DEVICE_KEYS_JSON`
   - `TRACKER_SESSION_ID`
 3. Connect your Android phone and run the app.
+4. In the app, pick the tracker number before pressing Start Tracking.
 
 ## Route Import Utility
 

@@ -15,13 +15,16 @@ class ApiClient {
         .readTimeout(15, TimeUnit.SECONDS)
         .build()
 
-    fun postPoints(points: List<LocationSample>): Boolean {
+    fun postPoints(points: List<LocationSample>, deviceId: String): Boolean {
         if (points.isEmpty()) {
             return true
         }
 
+        val deviceKey = DeviceConfig.deviceKeys()[deviceId] ?: return false
+
         val payload = JSONObject()
             .put("session_id", BuildConfig.TRACKER_SESSION_ID)
+            .put("device_id", deviceId)
             .put("batch_id", java.util.UUID.randomUUID().toString())
             .put("points", JSONArray().apply {
                 points.forEach { point ->
@@ -38,7 +41,7 @@ class ApiClient {
 
         val request = Request.Builder()
             .url(BuildConfig.TRACKER_BASE_URL + "/api/ingest")
-            .addHeader("X-Device-Key", BuildConfig.TRACKER_DEVICE_KEY)
+            .addHeader("X-Device-Key", deviceKey)
             .post(payload.toString().toRequestBody(JSON_MEDIA))
             .build()
 

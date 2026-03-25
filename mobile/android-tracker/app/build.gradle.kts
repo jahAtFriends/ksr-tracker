@@ -18,6 +18,8 @@ android {
 
         buildConfigField("String", "TRACKER_BASE_URL", "\"http://172.50.1.56:8000\"")
         buildConfigField("String", "TRACKER_DEVICE_KEY", "\"abc123\"")
+        buildConfigField("String", "TRACKER_DEVICE_KEYS_JSON", "\"{\\\"tracker-1\\\":\\\"abc123\\\",\\\"tracker-2\\\":\\\"abc123\\\"}\"")
+        buildConfigField("String", "TRACKER_DEVICE_IDS_CSV", "\"tracker-1,tracker-2\"")
         buildConfigField("String", "TRACKER_SESSION_ID", "\"race-2026\"")
         buildConfigField("long", "LOCATION_INTERVAL_MS", "5000L")
         buildConfigField("long", "LOCATION_FASTEST_MS", "2500L")

@@ -28,10 +28,11 @@ import java.time.Instant
 
 class TrackingService : Service() {
     private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
-    private val repository = LocationRepository(ApiClient())
+    private lateinit var repository: LocationRepository
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private var flushJob: Job? = null
     private var isTracking = false
+    private var activeDeviceId: String = "tracker-1"
 
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult) {
@@ -44,11 +45,20 @@ class TrackingService : Service() {
     override fun onCreate() {
         super.onCreate()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        activeDeviceId = DeviceConfig.selectedDeviceId(this)
+        repository = LocationRepository(ApiClient(), activeDeviceId)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_START -> startTracking()
+            ACTION_START -> {
+                val selected = intent.getStringExtra(EXTRA_DEVICE_ID)
+                if (!selected.isNullOrBlank() && selected != activeDeviceId) {
+                    activeDeviceId = selected
+                    repository = LocationRepository(ApiClient(), activeDeviceId)
+                }
+                startTracking()
+            }
             ACTION_STOP -> stopTracking()
         }
         return START_STICKY
@@ -70,7 +80,7 @@ class TrackingService : Service() {
         if (isTracking) {
             return
         }
-        startForeground(NOTIFICATION_ID, buildNotification("Tracking active"))
+        startForeground(NOTIFICATION_ID, buildNotification("Tracking active: $activeDeviceId"))
         isTracking = true
         startLocationUpdates()
         startFlushLoop()
@@ -170,6 +180,7 @@ class TrackingService : Service() {
     companion object {
         const val ACTION_START = "org.friends.ksrtracker.action.START"
         const val ACTION_STOP = "org.friends.ksrtracker.action.STOP"
+        const val EXTRA_DEVICE_ID = "org.friends.ksrtracker.extra.DEVICE_ID"
         private const val CHANNEL_ID = "ksr-tracking"
         private const val NOTIFICATION_ID = 1001
     }

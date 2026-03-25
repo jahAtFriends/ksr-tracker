@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends
 
 from ..auth import require_viewer_auth
 from ..config import settings
-from ..db import get_latest_point
+from ..db import get_latest_point, get_latest_points_by_device
 
 
 router = APIRouter(prefix="/api", tags=["state"])
@@ -74,23 +74,40 @@ def get_latest_state(
     session_id: str = "race-2026",
 ) -> dict[str, Any]:
     latest = get_latest_point(session_id)
+    latest_by_device = get_latest_points_by_device(session_id)
     route_geojson = _load_route_geojson(settings.route_path)
     route_points = _extract_line_coords(route_geojson)
 
-    progress_percent = None
-    if latest and route_points:
-        progress_percent = _route_progress_percent(float(latest["lat"]), float(latest["lng"]), route_points)
+    device_stats: dict[str, dict[str, float | None]] = {}
+    for point in latest_by_device:
+        progress_percent = None
+        if route_points:
+            progress_percent = _route_progress_percent(float(point["lat"]), float(point["lng"]), route_points)
 
-    speed_kmh = None
-    if latest and latest.get("speed") is not None:
-        speed_kmh = round(float(latest["speed"]) * 3.6, 2)
+        speed_kmh = None
+        if point.get("speed") is not None:
+            speed_kmh = round(float(point["speed"]) * 3.6, 2)
+
+        device_id = str(point.get("device_id", "tracker-1"))
+        device_stats[device_id] = {
+            "speed_kmh": speed_kmh,
+            "progress_percent": progress_percent,
+        }
+
+    overall_speed_kmh = None
+    overall_progress_percent = None
+    if latest and latest.get("device_id") in device_stats:
+        overall_speed_kmh = device_stats[latest["device_id"]]["speed_kmh"]
+        overall_progress_percent = device_stats[latest["device_id"]]["progress_percent"]
 
     return {
         "session_id": session_id,
         "server_time_utc": datetime.now(timezone.utc).isoformat(),
         "latest": latest,
+        "latest_by_device": latest_by_device,
         "stats": {
-            "speed_kmh": speed_kmh,
-            "progress_percent": progress_percent,
+            "speed_kmh": overall_speed_kmh,
+            "progress_percent": overall_progress_percent,
+            "by_device": device_stats,
         },
     }

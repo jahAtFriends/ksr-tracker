@@ -12,5 +12,6 @@ class LocationPointIn(BaseModel):
 
 class IngestRequest(BaseModel):
     session_id: str = Field(default="race-2026")
+    device_id: str = Field(default="tracker-1", min_length=1, max_length=64)
     batch_id: Optional[str] = None
     points: list[LocationPointIn] = Field(min_length=1, max_length=200)

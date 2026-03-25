@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 import os
+from typing import Dict
 
 from dotenv import load_dotenv
 
@@ -17,16 +18,24 @@ load_dotenv(ROOT_DIR / ".env")
 @dataclass(frozen=True)
 class Settings:
     device_key: str
+    device_keys: Dict[str, str]
     db_path: Path
     route_path: Path
     allowed_origin: str
     viewer_username: str
     viewer_password: str
 
+    def key_for_device(self, device_id: str) -> str | None:
+        if self.device_keys:
+            return self.device_keys.get(device_id)
+        return self.device_key if self.device_key else None
+
     @staticmethod
     def from_env() -> "Settings":
+        device_keys = _parse_device_keys(os.getenv("DEVICE_KEYS", ""))
         return Settings(
             device_key=os.getenv("DEVICE_KEY", "replace-me").strip(),
+            device_keys=device_keys,
             db_path=Path(os.getenv("DB_PATH", str(DEFAULT_DB_PATH))),
             route_path=Path(os.getenv("ROUTE_PATH", str(DEFAULT_ROUTE_PATH))),
             allowed_origin=os.getenv("ALLOWED_ORIGIN", "*"),
@@ -34,5 +43,18 @@ class Settings:
             viewer_password=os.getenv("VIEWER_PASSWORD", ""),
         )
 
+
+def _parse_device_keys(raw: str) -> Dict[str, str]:
+    parsed: Dict[str, str] = {}
+    for pair in raw.split(","):
+        value = pair.strip()
+        if not value or ":" not in value:
+            continue
+        device_id, key = value.split(":", 1)
+        did = device_id.strip()
+        dkey = key.strip()
+        if did and dkey:
+            parsed[did] = dkey
+    return parsed
 
 settings = Settings.from_env()
