@@ -1,0 +1,19 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Runtime data
+server/data/
+*.db
+.env
+
+# Android
+mobile/android-tracker/.gradle/
+mobile/android-tracker/**/build/
+mobile/android-tracker/local.properties
+*.iml
+
+# OS/editor
+.DS_Store
+Thumbs.db
