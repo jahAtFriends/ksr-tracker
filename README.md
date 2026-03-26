@@ -77,6 +77,40 @@ curl -X POST http://localhost:8000/api/ingest \
 - Systemd unit template: `ops/systemd/tracker-api.service`
 - Nginx reverse proxy template: `ops/nginx/tracker.conf`
 
+### Ubuntu Scripted Deployment (No Docker)
+
+From your checked-out repo on the Ubuntu server:
+
+```bash
+sudo bash ops/scripts/install_or_update_app.sh --repo-dir "$(pwd)"
+```
+
+Configure nginx for **HTTP only** during development:
+
+```bash
+sudo bash ops/scripts/configure_nginx_mode.sh --domain tracker.example.org --mode http
+```
+
+Enable HTTPS once DNS is ready and keep both HTTP + HTTPS during testing:
+
+```bash
+sudo bash ops/scripts/enable_https_letsencrypt.sh --domain tracker.example.org --email you@example.org --mode dual
+```
+
+Switch to final race-day mode (HTTP redirects to HTTPS):
+
+```bash
+sudo bash ops/scripts/configure_nginx_mode.sh --domain tracker.example.org --mode https-only
+```
+
+To deploy updates later:
+
+```bash
+sudo bash ops/scripts/install_or_update_app.sh --repo-dir "$(pwd)"
+```
+
+This gives you exactly what you asked for: simple non-container deployment, optional HTTP while developing, and HTTPS-only when ready.
+
 ## Android App
 
 1. Open [mobile/android-tracker](mobile/android-tracker) in Android Studio.
